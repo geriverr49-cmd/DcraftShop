@@ -1,6 +1,4 @@
 # Dcraft Market Ayarları
-# İstediğin eşyaları, fiyatlarını ve ikonlarını buradan değiştirebilirsin.
-
 menu-baslik: "§8§l» §6§lMARKET §8§l«"
 
 kategoriler:
@@ -8,6 +6,7 @@ kategoriler:
     isim: "§5§lEND"
     material: END_STONE
     slot: 11
+    birim: "para"
     esyalar:
       ender_incisi:
         isim: "§eEnder İncisi"
@@ -19,32 +18,29 @@ kategoriler:
         material: ENDER_EYE
         alis: 100
         satis: 50
-      end_stone:
-        isim: "§eEnd Taşı"
-        material: END_STONE
-        alis: 5
-        satis: 2
 
-  kristal:
-    isim: "§b§lKRİSTAL"
-    material: AMETHYST_SHARD
+  kasa:
+    isim: "§d§lKASA ANAHTARI"
+    material: TRIPWIRE_HOOK
     slot: 13
+    birim: "puan" # BURASI ÇOK ÖNEMLİ (Dcraft Puanı ile alınacak)
     esyalar:
-      kristal_1:
-        isim: "§bKristal"
-        material: AMETHYST_SHARD
+      efsanevi_kasa:
+        isim: "§dEfsanevi Kasa Anahtarı"
+        material: TRIPWIRE_HOOK
+        alis: 50
+        satis: 10
+      gizemli_kasa:
+        isim: "§5Gizemli Kasa Anahtarı"
+        material: TRIPWIRE_HOOK
         alis: 100
-        satis: 50
-      kristal_2:
-        isim: "§bParlak Kristal"
-        material: AMETHYST_CLUSTER
-        alis: 250
-        satis: 100
+        satis: 25
 
   nether:
     isim: "§c§lNETHER"
     material: NETHERRACK
     slot: 15
+    birim: "para"
     esyalar:
       netherrack:
         isim: "§cNetherrack"
@@ -56,16 +52,12 @@ kategoriler:
         material: BLAZE_ROD
         alis: 30
         satis: 15
-      magma_cream:
-        isim: "§6Magma Kremi"
-        material: MAGMA_CREAM
-        alis: 20
-        satis: 10
 
   aletler:
     isim: "§7§lALET EDEVAT"
     material: IRON_PICKAXE
     slot: 20
+    birim: "para"
     esyalar:
       demir_kazma:
         isim: "§fDemir Kazma"
@@ -77,16 +69,12 @@ kategoriler:
         material: DIAMOND_SWORD
         alis: 500
         satis: 250
-      demir_zirh:
-        isim: "§fDemir Göğüslük"
-        material: IRON_CHESTPLATE
-        alis: 300
-        satis: 150
 
   yemek:
     isim: "§6§lYEMEK"
     material: COOKED_BEEF
     slot: 24
+    birim: "para"
     esyalar:
       biftek:
         isim: "§cBiftek"
@@ -98,8 +86,3 @@ kategoriler:
         material: BREAD
         alis: 5
         satis: 2
-      altin_elma:
-        isim: "§6Altın Elma"
-        material: GOLDEN_APPLE
-        alis: 200
-        satis: 100
