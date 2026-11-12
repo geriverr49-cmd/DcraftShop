@@ -15,6 +15,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -23,8 +24,8 @@ import java.util.*;
 public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener {
 
     private Economy econ = null;
+    private Object ppAPI = null;
     
-    // Hafıza (Hangi oyuncu hangi kategoride ve hangi eşyada?)
     private final Map<UUID, String> AKTIF_KATEGORI = new HashMap<>();
     private final Map<UUID, String> AKTIF_ESYA = new HashMap<>();
 
@@ -32,9 +33,16 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
     public void onEnable() {
         saveDefaultConfig();
 
+        // Vault Bağlantısı (Para)
         if (getServer().getPluginManager().getPlugin("Vault") != null) {
             RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
             if (rsp != null) econ = rsp.getProvider();
+        }
+
+        // PlayerPoints Bağlantısı (Puan)
+        Plugin ppPlugin = getServer().getPluginManager().getPlugin("PlayerPoints");
+        if (ppPlugin != null && ppPlugin.isEnabled()) {
+            try { ppAPI = ppPlugin.getClass().getMethod("getAPI").invoke(ppPlugin); } catch (Exception ignored) {}
         }
 
         if (getCommand("market") != null) getCommand("market").setExecutor(this);
@@ -99,12 +107,13 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
         String baslik = "§8§l» §6§lMARKET - " + ChatColor.stripColor(k.getString("isim", "Kategori")) + " §8§l«";
         Inventory inv = Bukkit.createInventory(null, 54, baslik);
 
+        // Sadece alt kısmı camla doldur (Daha temiz görünüm)
         ItemStack cam = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
         ItemMeta cm = cam.getItemMeta(); if (cm != null) { cm.setDisplayName(" "); cam.setItemMeta(cm); }
-        for (int i = 0; i < 54; i++) inv.setItem(i, cam);
+        for (int i = 45; i < 54; i++) inv.setItem(i, cam);
 
         ConfigurationSection esyalar = k.getConfigurationSection("esyalar");
-        int slot = 10;
+        int slot = 10; // Ortadan başla
         if (esyalar != null) {
             for (String key : esyalar.getKeys(false)) {
                 ConfigurationSection e = esyalar.getConfigurationSection(key);
@@ -119,8 +128,12 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
                     meta.setDisplayName(e.getString("isim", "§eEşya"));
                     List<String> lore = new ArrayList<>();
                     lore.add("§8§m-----------------------");
-                    lore.add("§7Alış Fiyatı: §a" + e.getInt("alis") + " TL");
-                    lore.add("§7Satış Fiyatı: §c" + e.getInt("satis") + " TL");
+                    
+                    String birim = k.getString("birim", "para");
+                    String birimIsmi = birim.equals("para") ? "TL" : "Dcraft Puanı";
+                    
+                    lore.add("§7Alış Fiyatı: §a" + e.getInt("alis") + " " + birimIsmi);
+                    lore.add("§7Satış Fiyatı: §c" + e.getInt("satis") + " " + birimIsmi);
                     lore.add("§8§m-----------------------");
                     lore.add("§aAlmak veya Satmak için tıkla!");
                     lore.add("§8ID: " + key);
@@ -139,10 +152,14 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
         p.openInventory(inv);
     }
 
-    // --- 3. MİKTAR SEÇİM MENÜSÜ (1x, 10x, 32x) ---
+    // --- 3. MİKTAR SEÇİM MENÜSÜ ---
     private void islemMenuAc(Player p, String katId, String esyaId) {
         ConfigurationSection e = getConfig().getConfigurationSection("kategoriler." + katId + ".esyalar." + esyaId);
         if (e == null) return;
+        
+        ConfigurationSection k = getConfig().getConfigurationSection("kategoriler." + katId);
+        String birim = k.getString("birim", "para");
+        String birimIsmi = birim.equals("para") ? "TL" : "Puan";
 
         AKTIF_ESYA.put(p.getUniqueId(), esyaId);
 
@@ -166,8 +183,8 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
             oMeta.setDisplayName(esyaIsim);
             oMeta.setLore(Arrays.asList(
                 "§8§m-----------------------",
-                "§7Alış Fiyatı: §a" + alis + " TL",
-                "§7Satış Fiyatı: §c" + satis + " TL",
+                "§7Alış Fiyatı: §a" + alis + " " + birimIsmi,
+                "§7Satış Fiyatı: §c" + satis + " " + birimIsmi,
                 "§8§m-----------------------",
                 "§7Aşağıdaki camlardan birini seç."
             ));
@@ -178,20 +195,19 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
         inv.setItem(22, ortaEsya);
 
         // --- ALIŞ BUTONLARI (YEŞİL CAM) ---
-        inv.setItem(29, olusturButon(Material.LIME_STAINED_GLASS_PANE, "§a§l1 TANE AL", "§7Fiyat: §a" + alis + " TL", "ALIS:1"));
-        inv.setItem(30, olusturButon(Material.LIME_STAINED_GLASS_PANE, "§a§l10 TANE AL", "§7Fiyat: §a" + (alis * 10) + " TL", "ALIS:10"));
-        inv.setItem(31, olusturButon(Material.LIME_STAINED_GLASS_PANE, "§a§l32 TANE AL", "§7Fiyat: §a" + (alis * 32) + " TL", "ALIS:32"));
-        inv.setItem(32, olusturButon(Material.LIME_STAINED_GLASS_PANE, "§a§l64 TANE AL", "§7Fiyat: §a" + (alis * 64) + " TL", "ALIS:64"));
+        inv.setItem(29, olusturButon(Material.LIME_STAINED_GLASS_PANE, "§a§l1 TANE AL", "§7Fiyat: §a" + alis + " " + birimIsmi, "ALIS:1"));
+        inv.setItem(30, olusturButon(Material.LIME_STAINED_GLASS_PANE, "§a§l10 TANE AL", "§7Fiyat: §a" + (alis * 10) + " " + birimIsmi, "ALIS:10"));
+        inv.setItem(31, olusturButon(Material.LIME_STAINED_GLASS_PANE, "§a§l32 TANE AL", "§7Fiyat: §a" + (alis * 32) + " " + birimIsmi, "ALIS:32"));
+        inv.setItem(32, olusturButon(Material.LIME_STAINED_GLASS_PANE, "§a§l64 TANE AL", "§7Fiyat: §a" + (alis * 64) + " " + birimIsmi, "ALIS:64"));
         inv.setItem(33, olusturButon(Material.LIME_STAINED_GLASS_PANE, "§a§lPARAN KADAR AL", "§7Fiyat: §aHesaplanacak", "ALIS:HEPSI"));
 
         // --- SATIŞ BUTONLARI (KIRMIZI CAM) ---
-        inv.setItem(38, olusturButon(Material.RED_STAINED_GLASS_PANE, "§c§l1 TANE SAT", "§7Kazanç: §c" + satis + " TL", "SATIS:1"));
-        inv.setItem(39, olusturButon(Material.RED_STAINED_GLASS_PANE, "§c§l10 TANE SAT", "§7Kazanç: §c" + (satis * 10) + " TL", "SATIS:10"));
-        inv.setItem(40, olusturButon(Material.RED_STAINED_GLASS_PANE, "§c§l32 TANE SAT", "§7Kazanç: §c" + (satis * 32) + " TL", "SATIS:32"));
-        inv.setItem(41, olusturButon(Material.RED_STAINED_GLASS_PANE, "§c§l64 TANE SAT", "§7Kazanç: §c" + (satis * 64) + " TL", "SATIS:64"));
+        inv.setItem(38, olusturButon(Material.RED_STAINED_GLASS_PANE, "§c§l1 TANE SAT", "§7Kazanç: §c" + satis + " " + birimIsmi, "SATIS:1"));
+        inv.setItem(39, olusturButon(Material.RED_STAINED_GLASS_PANE, "§c§l10 TANE SAT", "§7Kazanç: §c" + (satis * 10) + " " + birimIsmi, "SATIS:10"));
+        inv.setItem(40, olusturButon(Material.RED_STAINED_GLASS_PANE, "§c§l32 TANE SAT", "§7Kazanç: §c" + (satis * 32) + " " + birimIsmi, "SATIS:32"));
+        inv.setItem(41, olusturButon(Material.RED_STAINED_GLASS_PANE, "§c§l64 TANE SAT", "§7Kazanç: §c" + (satis * 64) + " " + birimIsmi, "SATIS:64"));
         inv.setItem(42, olusturButon(Material.RED_STAINED_GLASS_PANE, "§c§lHEPSİNİ SAT", "§7Kazanç: §cHesaplanacak", "SATIS:HEPSI"));
 
-        // Bilgi ve Geri Dön
         inv.setItem(4, olusturButon(Material.PAPER, "§e§lBilgilendirme", "§7Yeşil Camlar: §aSatın Al\n§7Kırmızı Camlar: §cElindekini Sat", null));
         inv.setItem(49, olusturButon(Material.ARROW, "§c§lGeri Dön", "§7Kategoriye dön.", null));
 
@@ -221,11 +237,9 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
         ItemStack clicked = e.getCurrentItem();
         if (clicked == null) return;
 
-        // --- ANA MENÜ ---
         if (title.equals(getConfig().getString("menu-baslik", "§8§l» §6§lMARKET §8§l«"))) {
             e.setCancelled(true);
             if (clicked.getType() == Material.BARRIER) { p.closeInventory(); return; }
-
             if (clicked.hasItemMeta() && clicked.getItemMeta().getLore() != null) {
                 for (String s : clicked.getItemMeta().getLore()) {
                     if (s.startsWith("§8ID: ")) {
@@ -237,7 +251,6 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
             return;
         }
 
-        // --- KATEGORİ MENÜSÜ ---
         if (title.startsWith("§8§l» §6§lMARKET - ")) {
             e.setCancelled(true);
             if (clicked.getType() == Material.BARRIER) { p.closeInventory(); return; }
@@ -255,10 +268,8 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
             return;
         }
 
-        // --- AL / SAT MENÜSÜ ---
         if (title.equals("§8§l» §6§lAL / SAT §8§l«")) {
             e.setCancelled(true);
-            
             if (clicked.getType() == Material.ARROW) { 
                 kategoriMenuAc(p, AKTIF_KATEGORI.get(p.getUniqueId())); 
                 return; 
@@ -276,21 +287,22 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
                 String esyaId = AKTIF_ESYA.get(p.getUniqueId());
 
                 if (tag.startsWith("ALIS:")) {
-                    String miktarStr = tag.replace("ALIS:", "");
-                    islemYap(p, katId, esyaId, "AL", miktarStr);
+                    islemYap(p, katId, esyaId, "AL", tag.replace("ALIS:", ""));
                 } else if (tag.startsWith("SATIS:")) {
-                    String miktarStr = tag.replace("SATIS:", "");
-                    islemYap(p, katId, esyaId, "SAT", miktarStr);
+                    islemYap(p, katId, esyaId, "SAT", tag.replace("SATIS:", ""));
                 }
             }
             return;
         }
     }
 
-    // --- İŞLEM YAPMA (AL / SAT) ---
+    // --- İŞLEM YAPMA (PARA VEYA PUAN) ---
     private void islemYap(Player p, String katId, String esyaId, String tur, String miktarStr) {
         ConfigurationSection e = getConfig().getConfigurationSection("kategoriler." + katId + ".esyalar." + esyaId);
-        if (e == null || econ == null) return;
+        if (e == null) return;
+        
+        ConfigurationSection k = getConfig().getConfigurationSection("kategoriler." + katId);
+        String birim = k.getString("birim", "para");
 
         Material mat = Material.matchMaterial(e.getString("material", "STONE"));
         if (mat == null) mat = Material.STONE;
@@ -300,22 +312,12 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
 
         if (miktarStr.equals("HEPSI")) {
             if (tur.equals("AL")) {
-                // Parayla alınabilecek maksimum miktar
-                int bakiye = (int) econ.getBalance(p);
+                int bakiye = getBakiye(p, birim);
                 miktar = bakiye / birimFiyat;
-                if (miktar <= 0) {
-                    p.sendMessage("§cYetersiz bakiyen!");
-                    p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
-                    return;
-                }
+                if (miktar <= 0) { p.sendMessage("§cYetersiz bakiyen!"); p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f); return; }
             } else {
-                // Envanterdeki tüm eşyaları say
                 miktar = envanterdeKacTaneVar(p, mat);
-                if (miktar <= 0) {
-                    p.sendMessage("§cEnvanterinde satacak eşya yok!");
-                    p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
-                    return;
-                }
+                if (miktar <= 0) { p.sendMessage("§cEnvanterinde satacak eşya yok!"); p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f); return; }
             }
         } else {
             miktar = Integer.parseInt(miktarStr);
@@ -324,65 +326,85 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
         int toplamFiyat = birimFiyat * miktar;
 
         if (tur.equals("AL")) {
-            if (econ.getBalance(p) < toplamFiyat) {
+            if (getBakiye(p, birim) < toplamFiyat) {
                 p.sendMessage("§cYetersiz bakiyen! Gerekli: §e" + toplamFiyat);
                 p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
-            econ.withdrawPlayer(p, toplamFiyat);
+            paraCek(p, birim, toplamFiyat);
             
             ItemStack item = new ItemStack(mat, miktar);
             HashMap<Integer, ItemStack> kalanlar = p.getInventory().addItem(item);
             for (ItemStack kalan : kalanlar.values()) p.getWorld().dropItemNaturally(p.getLocation(), kalan);
 
             p.sendMessage("§a§l✔ §aBaşarıyla §e" + miktar + "x " + ChatColor.stripColor(e.getString("isim")) + " §asatın aldın!");
-            p.sendMessage("§7Ödenen: §e" + toplamFiyat + " TL");
+            p.sendMessage("§7Ödenen: §e" + toplamFiyat + " " + (birim.equals("para") ? "TL" : "Puan"));
             p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 
         } else {
-            // SATIŞ
             if (envanterdeKacTaneVar(p, mat) < miktar) {
                 p.sendMessage("§cEnvanterinde yeterince eşya yok!");
                 p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
             envanterdenSil(p, mat, miktar);
-            econ.depositPlayer(p, toplamFiyat);
+            paraVer(p, birim, toplamFiyat);
 
             p.sendMessage("§a§l✔ §aBaşarıyla §e" + miktar + "x " + ChatColor.stripColor(e.getString("isim")) + " §asattın!");
-            p.sendMessage("§7Kazanılan: §e" + toplamFiyat + " TL");
+            p.sendMessage("§7Kazanılan: §e" + toplamFiyat + " " + (birim.equals("para") ? "TL" : "Puan"));
             p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
         }
 
         p.closeInventory();
     }
 
-    // OYUNCUNUN ELİNDEKİ EŞYAYI SAYMA
+    // --- BAKİYE İŞLEMLERİ (PARA VEYA PUAN) ---
+    private int getBakiye(Player p, String birim) {
+        if (birim.equals("para")) {
+            return econ != null ? (int) econ.getBalance(p) : 0;
+        } else {
+            if (ppAPI == null) return 0;
+            try { return (int) ppAPI.getClass().getMethod("look", UUID.class).invoke(ppAPI, p.getUniqueId()); } catch (Exception ex) { return 0; }
+        }
+    }
+
+    private void paraCek(Player p, String birim, int miktar) {
+        if (birim.equals("para")) {
+            if (econ != null) econ.withdrawPlayer(p, miktar);
+        } else {
+            if (ppAPI != null) {
+                try { ppAPI.getClass().getMethod("take", UUID.class, int.class).invoke(ppAPI, p.getUniqueId(), miktar); } catch (Exception ignored) {}
+            }
+        }
+    }
+
+    private void paraVer(Player p, String birim, int miktar) {
+        if (birim.equals("para")) {
+            if (econ != null) econ.depositPlayer(p, miktar);
+        } else {
+            if (ppAPI != null) {
+                try { ppAPI.getClass().getMethod("give", UUID.class, int.class).invoke(ppAPI, p.getUniqueId(), miktar); } catch (Exception ignored) {}
+            }
+        }
+    }
+
     private int envanterdeKacTaneVar(Player p, Material mat) {
         int count = 0;
         for (ItemStack item : p.getInventory().getContents()) {
-            if (item != null && item.getType() == mat) {
-                count += item.getAmount();
-            }
+            if (item != null && item.getType() == mat) count += item.getAmount();
         }
         return count;
     }
 
-    // OYUNCUDAN EŞYA SİLME
     private void envanterdenSil(Player p, Material mat, int miktar) {
         int kalan = miktar;
         for (int i = 0; i < p.getInventory().getSize(); i++) {
             ItemStack item = p.getInventory().getItem(i);
             if (item != null && item.getType() == mat) {
-                if (item.getAmount() <= kalan) {
-                    kalan -= item.getAmount();
-                    p.getInventory().setItem(i, null);
-                } else {
-                    item.setAmount(item.getAmount() - kalan);
-                    kalan = 0;
-                }
+                if (item.getAmount() <= kalan) { kalan -= item.getAmount(); p.getInventory().setItem(i, null); } 
+                else { item.setAmount(item.getAmount() - kalan); kalan = 0; }
                 if (kalan <= 0) break;
             }
         }
     }
-}
+    }
