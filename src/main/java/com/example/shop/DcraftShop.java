@@ -24,8 +24,9 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
 
     private Economy econ = null;
     
-    // Oyuncunun hangi menüde olduğunu hatırlamak için
+    // Hafıza (Hangi oyuncu hangi kategoride ve hangi eşyada?)
     private final Map<UUID, String> AKTIF_KATEGORI = new HashMap<>();
+    private final Map<UUID, String> AKTIF_ESYA = new HashMap<>();
 
     @Override
     public void onEnable() {
@@ -95,7 +96,7 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
 
         AKTIF_KATEGORI.put(p.getUniqueId(), katId);
 
-        String baslik = "§8§l» §6§lMARKET - " + ChatColor.stripColor(k.getString("isim", "Kategori"));
+        String baslik = "§8§l» §6§lMARKET - " + ChatColor.stripColor(k.getString("isim", "Kategori")) + " §8§l«";
         Inventory inv = Bukkit.createInventory(null, 54, baslik);
 
         ItemStack cam = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
@@ -143,6 +144,8 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
         ConfigurationSection e = getConfig().getConfigurationSection("kategoriler." + katId + ".esyalar." + esyaId);
         if (e == null) return;
 
+        AKTIF_ESYA.put(p.getUniqueId(), esyaId);
+
         String baslik = "§8§l» §6§lAL / SAT §8§l«";
         Inventory inv = Bukkit.createInventory(null, 54, baslik);
 
@@ -179,28 +182,31 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
         inv.setItem(30, olusturButon(Material.LIME_STAINED_GLASS_PANE, "§a§l10 TANE AL", "§7Fiyat: §a" + (alis * 10) + " TL", "ALIS:10"));
         inv.setItem(31, olusturButon(Material.LIME_STAINED_GLASS_PANE, "§a§l32 TANE AL", "§7Fiyat: §a" + (alis * 32) + " TL", "ALIS:32"));
         inv.setItem(32, olusturButon(Material.LIME_STAINED_GLASS_PANE, "§a§l64 TANE AL", "§7Fiyat: §a" + (alis * 64) + " TL", "ALIS:64"));
-        inv.setItem(33, olusturButon(Material.LIME_STAINED_GLASS_PANE, "§a§lENVANTER KADAR AL", "§7Fiyat: §aHesaplanacak", "ALIS:HEPSI"));
+        inv.setItem(33, olusturButon(Material.LIME_STAINED_GLASS_PANE, "§a§lPARAN KADAR AL", "§7Fiyat: §aHesaplanacak", "ALIS:HEPSI"));
 
         // --- SATIŞ BUTONLARI (KIRMIZI CAM) ---
         inv.setItem(38, olusturButon(Material.RED_STAINED_GLASS_PANE, "§c§l1 TANE SAT", "§7Kazanç: §c" + satis + " TL", "SATIS:1"));
         inv.setItem(39, olusturButon(Material.RED_STAINED_GLASS_PANE, "§c§l10 TANE SAT", "§7Kazanç: §c" + (satis * 10) + " TL", "SATIS:10"));
         inv.setItem(40, olusturButon(Material.RED_STAINED_GLASS_PANE, "§c§l32 TANE SAT", "§7Kazanç: §c" + (satis * 32) + " TL", "SATIS:32"));
         inv.setItem(41, olusturButon(Material.RED_STAINED_GLASS_PANE, "§c§l64 TANE SAT", "§7Kazanç: §c" + (satis * 64) + " TL", "SATIS:64"));
-        inv.setItem(42, olusturButon(Material.RED_STAINED_GLASS_PANE, "§c§lENVANTERDEKİLERİ SAT", "§7Kazanç: §cHesaplanacak", "SATIS:HEPSI"));
+        inv.setItem(42, olusturButon(Material.RED_STAINED_GLASS_PANE, "§c§lHEPSİNİ SAT", "§7Kazanç: §cHesaplanacak", "SATIS:HEPSI"));
 
         // Bilgi ve Geri Dön
-        inv.setItem(4, olusturButon(Material.PAPER, "§e§lBilgilendirme", "§7Yeşil Camlar: §aSatın Al\n§7Kırmızı Camlar: §cSat", null));
+        inv.setItem(4, olusturButon(Material.PAPER, "§e§lBilgilendirme", "§7Yeşil Camlar: §aSatın Al\n§7Kırmızı Camlar: §cElindekini Sat", null));
         inv.setItem(49, olusturButon(Material.ARROW, "§c§lGeri Dön", "§7Kategoriye dön.", null));
 
         p.openInventory(inv);
     }
 
-    private ItemStack olusturButon(Material mat, String isim, String aciklama, String nbtTag) {
+    private ItemStack olusturButon(Material mat, String isim, String aciklama, String tag) {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(isim);
-            meta.setLore(Arrays.asList(aciklama, "§8ID: " + nbtTag));
+            List<String> lore = new ArrayList<>();
+            lore.add(aciklama);
+            if (tag != null) lore.add("§8ID: " + tag);
+            meta.setLore(lore);
             meta.addEnchant(Enchantment.UNBREAKING, 1, true);
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
             item.setItemMeta(meta);
@@ -263,11 +269,11 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
                 for (String s : clicked.getItemMeta().getLore()) {
                     if (s.startsWith("§8ID: ")) { tag = s.replace("§8ID: ", ""); break; }
                 }
+                
                 if (tag == null || tag.equals("null")) return;
 
-                // Hangi eşya olduğunu bul
                 String katId = AKTIF_KATEGORI.get(p.getUniqueId());
-                String esyaId = getEsyaIdFromKat(katId, title); // Tıklanan eşyayı bul
+                String esyaId = AKTIF_ESYA.get(p.getUniqueId());
 
                 if (tag.startsWith("ALIS:")) {
                     String miktarStr = tag.replace("ALIS:", "");
@@ -281,28 +287,74 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
         }
     }
 
-    // Yardımcı: Menüdeki eşyanın ID'sini bulma
-    private String getEsyaIdFromKat(String katId, String title) {
-        ConfigurationSection k = getConfig().getConfigurationSection("kategoriler." + katId);
-        if (k == null) return null;
-        ConfigurationSection esyalar = k.getConfigurationSection("esyalar");
-        if (esyalar != null) {
-            for (String key : esyalar.getKeys(false)) {
-                // Menüdeki itemi tekrar bulmak zor olduğu için, kullanıcının en son tıkladığı eşyayı map'te tutsak daha iyi olurdu.
-                // Ama şu an menüdeki ikonlardan ID'yi okuyoruz.
-            }
-        }
-        return null;
-    }
-
     // --- İŞLEM YAPMA (AL / SAT) ---
     private void islemYap(Player p, String katId, String esyaId, String tur, String miktarStr) {
-        // Eşya ID'sini menüden tekrar bulmak için geçici çözüm (Hafızada tutmak daha sağlıklı)
-        // Burada menüden gelen tagleri kullanacağız ama miktarı da bilmemiz lazım.
-        // Basitlik açısından bu kısmı doğrudan tıklanan eşya üzerinden yapalım.
-        
-        // Eşya ID'sini bulmak için kullanıcının elindeki eşyayı veya lore'daki ismi kullanabiliriz.
-        // Ama en temizi: AL/SAT menüsü açılırken eşyaId'yi de hafızaya kaydetmek.
+        ConfigurationSection e = getConfig().getConfigurationSection("kategoriler." + katId + ".esyalar." + esyaId);
+        if (e == null || econ == null) return;
+
+        Material mat = Material.matchMaterial(e.getString("material", "STONE"));
+        if (mat == null) mat = Material.STONE;
+
+        int birimFiyat = tur.equals("AL") ? e.getInt("alis") : e.getInt("satis");
+        int miktar = 0;
+
+        if (miktarStr.equals("HEPSI")) {
+            if (tur.equals("AL")) {
+                // Parayla alınabilecek maksimum miktar
+                int bakiye = (int) econ.getBalance(p);
+                miktar = bakiye / birimFiyat;
+                if (miktar <= 0) {
+                    p.sendMessage("§cYetersiz bakiyen!");
+                    p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+                    return;
+                }
+            } else {
+                // Envanterdeki tüm eşyaları say
+                miktar = envanterdeKacTaneVar(p, mat);
+                if (miktar <= 0) {
+                    p.sendMessage("§cEnvanterinde satacak eşya yok!");
+                    p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+                    return;
+                }
+            }
+        } else {
+            miktar = Integer.parseInt(miktarStr);
+        }
+
+        int toplamFiyat = birimFiyat * miktar;
+
+        if (tur.equals("AL")) {
+            if (econ.getBalance(p) < toplamFiyat) {
+                p.sendMessage("§cYetersiz bakiyen! Gerekli: §e" + toplamFiyat);
+                p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+                return;
+            }
+            econ.withdrawPlayer(p, toplamFiyat);
+            
+            ItemStack item = new ItemStack(mat, miktar);
+            HashMap<Integer, ItemStack> kalanlar = p.getInventory().addItem(item);
+            for (ItemStack kalan : kalanlar.values()) p.getWorld().dropItemNaturally(p.getLocation(), kalan);
+
+            p.sendMessage("§a§l✔ §aBaşarıyla §e" + miktar + "x " + ChatColor.stripColor(e.getString("isim")) + " §asatın aldın!");
+            p.sendMessage("§7Ödenen: §e" + toplamFiyat + " TL");
+            p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+
+        } else {
+            // SATIŞ
+            if (envanterdeKacTaneVar(p, mat) < miktar) {
+                p.sendMessage("§cEnvanterinde yeterince eşya yok!");
+                p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+                return;
+            }
+            envanterdenSil(p, mat, miktar);
+            econ.depositPlayer(p, toplamFiyat);
+
+            p.sendMessage("§a§l✔ §aBaşarıyla §e" + miktar + "x " + ChatColor.stripColor(e.getString("isim")) + " §asattın!");
+            p.sendMessage("§7Kazanılan: §e" + toplamFiyat + " TL");
+            p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
+        }
+
+        p.closeInventory();
     }
 
     // OYUNCUNUN ELİNDEKİ EŞYAYI SAYMA
@@ -333,4 +385,4 @@ public class DcraftShop extends JavaPlugin implements CommandExecutor, Listener 
             }
         }
     }
-          }
+}
