@@ -1,0 +1,105 @@
+# Dcraft Market Ayarları
+# İstediğin eşyaları, fiyatlarını ve ikonlarını buradan değiştirebilirsin.
+
+menu-baslik: "§8§l» §6§lMARKET §8§l«"
+
+kategoriler:
+  end:
+    isim: "§5§lEND"
+    material: END_STONE
+    slot: 11
+    esyalar:
+      ender_incisi:
+        isim: "§eEnder İncisi"
+        material: ENDER_PEARL
+        alis: 50
+        satis: 25
+      ender_gozu:
+        isim: "§aEnder Gözü"
+        material: ENDER_EYE
+        alis: 100
+        satis: 50
+      end_stone:
+        isim: "§eEnd Taşı"
+        material: END_STONE
+        alis: 5
+        satis: 2
+
+  kristal:
+    isim: "§b§lKRİSTAL"
+    material: AMETHYST_SHARD
+    slot: 13
+    esyalar:
+      kristal_1:
+        isim: "§bKristal"
+        material: AMETHYST_SHARD
+        alis: 100
+        satis: 50
+      kristal_2:
+        isim: "§bParlak Kristal"
+        material: AMETHYST_CLUSTER
+        alis: 250
+        satis: 100
+
+  nether:
+    isim: "§c§lNETHER"
+    material: NETHERRACK
+    slot: 15
+    esyalar:
+      netherrack:
+        isim: "§cNetherrack"
+        material: NETHERRACK
+        alis: 2
+        satis: 1
+      blaze_rod:
+        isim: "§eBlaze Çubuğu"
+        material: BLAZE_ROD
+        alis: 30
+        satis: 15
+      magma_cream:
+        isim: "§6Magma Kremi"
+        material: MAGMA_CREAM
+        alis: 20
+        satis: 10
+
+  aletler:
+    isim: "§7§lALET EDEVAT"
+    material: IRON_PICKAXE
+    slot: 20
+    esyalar:
+      demir_kazma:
+        isim: "§fDemir Kazma"
+        material: IRON_PICKAXE
+        alis: 150
+        satis: 75
+      elmas_kilic:
+        isim: "§bElmas Kılıç"
+        material: DIAMOND_SWORD
+        alis: 500
+        satis: 250
+      demir_zirh:
+        isim: "§fDemir Göğüslük"
+        material: IRON_CHESTPLATE
+        alis: 300
+        satis: 150
+
+  yemek:
+    isim: "§6§lYEMEK"
+    material: COOKED_BEEF
+    slot: 24
+    esyalar:
+      biftek:
+        isim: "§cBiftek"
+        material: COOKED_BEEF
+        alis: 10
+        satis: 5
+      ekmek:
+        isim: "§eEkmek"
+        material: BREAD
+        alis: 5
+        satis: 2
+      altin_elma:
+        isim: "§6Altın Elma"
+        material: GOLDEN_APPLE
+        alis: 200
+        satis: 100
