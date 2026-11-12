@@ -1,0 +1,12 @@
+name: DcraftShop
+version: 1.0.0
+main: com.example.shop.DcraftShop
+api-version: 1.21
+author: Sen
+description: Premium Kategori Marketi
+depend: [Vault]
+
+commands:
+  market:
+    description: Sunucu marketini acar
+    aliases: [shop, magaza]
